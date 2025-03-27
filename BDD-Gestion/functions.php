@@ -168,217 +168,313 @@ function addDevice($userId, $name, $type, $location) {
     return $stmt->execute();
 }
 
+// Fonction pour récupérer les appareils d'un utilisateur avec recherche et filtre sur le statut
 function getDevices($userId, $search = "", $status = "") {
-    global $conn;
+    global $conn; // Connexion globale
+
+    // Requête SQL de base
     $query = "SELECT * FROM devices WHERE user_id = ?";
-    
+
+    // Si un terme de recherche est fourni, ajoute un filtre sur le nom
     if (!empty($search)) {
         $query .= " AND name LIKE ?";
-        $search = "%$search%";
+        $search = "%$search%"; // Prépare la recherche avec des caractères génériques
     }
+
+    // Si un statut est fourni, ajoute un filtre sur le statut
     if (!empty($status)) {
         $query .= " AND status = ?";
     }
 
+    // Requête SQL
     $stmt = $conn->prepare($query);
 
+    // Lier les paramètres en fonction de la présence des variables search et status
     if (!empty($search) && !empty($status)) {
+        // Si les deux filtres sont présents, lier 3 paramètres : user_id, search, status
         $stmt->bind_param("iss", $userId, $search, $status);
     } elseif (!empty($search)) {
+        // Si seulement search est présent, lier 2 paramètres : user_id, search
         $stmt->bind_param("is", $userId, $search);
     } elseif (!empty($status)) {
+        // Si seulement status est présent, lier 2 paramètres : user_id, status
         $stmt->bind_param("is", $userId, $status);
     } else {
+        // Si aucun filtre n'est présent, lier uniquement user_id
         $stmt->bind_param("i", $userId);
     }
-
     $stmt->execute();
+
+    // Récupérer et retourner tous les résultats sous forme de tableau associatif
     return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 }
+
+
+// Fonction pour récupérer un appareil spécifique à partir de son ID
 function getDeviceById($deviceId) {
-    global $conn;
+    global $conn; // Connexion globale 
+
+    // Requête SQL pour récupérer les informations d'un appareil avec l'ID donné
     $stmt = $conn->prepare("SELECT * FROM devices WHERE id = ?");
+    
+    // Lie l'ID de l'appareil (entier) au paramètre de la requête SQL
     $stmt->bind_param("i", $deviceId);
     $stmt->execute();
+
+    // Récupère le résultat de la requête et retourne les données sous forme de tableau associatif
     return $stmt->get_result()->fetch_assoc();
 }
+
+
+// Fonction pour mettre à jour le statut d'un appareil en fonction de son ID
 function updateDeviceStatus($deviceId, $status) {
-    global $conn;
+    global $conn; // Connexion globale
+
+    // Prépare la requête SQL pour mettre à jour le statut de l'appareil avec l'ID donné
     $stmt = $conn->prepare("UPDATE devices SET status = ? WHERE id = ?");
+    
+    // Lie les paramètres status de l'objet (chaîne de caractères) et deviceId (entier)
     $stmt->bind_param("si", $status, $deviceId);
     return $stmt->execute();
 }
-function deleteDevice($deviceId) {
-    global $conn;
 
+
+// Fonction pour supprimer un appareil de la base de données en fonction de son ID
+function deleteDevice($deviceId) {
+    global $conn; // Utilise la connexion globale à la base de données
+
+    // Requête SQL pour supprimer un appareil avec l'ID donné
     $sql = "DELETE FROM devices WHERE id = ?";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $deviceId);
     
-    return $stmt->execute();  // Retourne true en cas de succès, false en cas d'échec
+    // Lier l'ID de l'appareil à la requête préparée 
+    $stmt->bind_param("i", $deviceId);
+    return $stmt->execute();
 }
+
+
+// Fonction pour ajouter des données associées à un appareil
 function addDeviceData($deviceId, $userId, $dataType, $value) {
-    global $conn;
+    global $conn; // Connexion globale
+
+    // Requête SQL pour insérer de nouvelles données dans la table 'device_data'
     $stmt = $conn->prepare("INSERT INTO device_data (device_id, user_id, data_type, value) VALUES (?, ?, ?, ?)");
+    
+    // Lier les paramètres à la requête 
+    // "i" pour entier (device_id et user_id), "s" pour chaîne de caractères (data_type et value)
     $stmt->bind_param("iiss", $deviceId, $userId, $dataType, $value);
     return $stmt->execute();
 }
+
+
+// Fonction pour récupérer le niveau d'un utilisateur à partir de son ID
 function getUserLevel($userId) {
-    global $conn;  // Assurez-vous que la connexion à la base de données est déjà établie
+    global $conn;  
     
-    // Requête pour récupérer le niveau de l'utilisateur
+    // Requête SQL pour récupérer le niveau de l'utilisateur
     $sql = "SELECT level FROM users WHERE id = ?";
-    
-    // Préparer la requête
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $userId);  // Le paramètre est de type entier (i) pour l'ID de l'utilisateur
+    
+    // Lier l'ID de l'utilisateur à la requête préparée (paramètre de type entier "i")
+    $stmt->bind_param("i", $userId);  
     $stmt->execute();
     
-    // Récupérer le résultat
+    // Récupérer le résultat 
     $result = $stmt->get_result();
     
-    // Vérifier si un utilisateur est trouvé
+    // Vérifier si l'utilisateur a été trouvé dans la base de données
     if ($result->num_rows > 0) {
-        $user = $result->fetch_assoc();
+        $user = $result->fetch_assoc();  // Récupérer le premier résultat sous forme de tableau associatif
         return $user['level'];  // Retourner le niveau de l'utilisateur
     } else {
-        return null;  // Retourne null si l'utilisateur n'existe pas
+        return null;  // Retourner null si l'utilisateur n'existe pas
     }
 }
+
+
+
+// Fonction pour créer une famille, l'utilisateur devient le chef de famille
 function createFamily($userId) {
-    global $conn;
-    $familyId = $userId; // L'ID du chef de famille devient l'ID de la famille
+    global $conn;      
+    // L'ID du chef de famille devient l'ID de la famille
+    $familyId = $userId; 
+
+    // Requête SQL pour mettre à jour l'ID de la famille pour cet utilisateur
     $stmt = $conn->prepare("UPDATE users SET family_id = ? WHERE id = ?");
+    
+    // Lier les paramètres : family_id et user_id tous deux  entier
     $stmt->bind_param("ii", $familyId, $userId);
     return $stmt->execute();
 }
 
-function generateInvitation($complexeId, $email) {
-    global $conn;
 
-    // Vérifier si l'utilisateur invité existe
+// Fonction pour générer une invitation pour un utilisateur et associer un complexe à une famille si nécessaire
+function generateInvitation($complexeId, $email) {
+    global $conn;  
+
+    // Vérifier si l'utilisateur invité existe en recherchant par son email
     $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $result = $stmt->get_result();
 
+    // Si l'utilisateur existe, procéder à l'invitation
     if ($user = $result->fetch_assoc()) {
-        $userId = $user['id'];
-        $token = bin2hex(random_bytes(50));
+        $userId = $user['id'];  // Récupère l'ID de l'utilisateur
+        $token = bin2hex(random_bytes(50));  // Génère un token d'invitation sécurisé
 
-        // Vérifier si le complexe a déjà une famille
+        // Vérifier si l'utilisateur a déjà une famille (en vérifiant s'il a un `family_id`)
         $stmt = $conn->prepare("SELECT family_id FROM users WHERE id = ?");
         $stmt->bind_param("i", $complexeId);
         $stmt->execute();
         $result = $stmt->get_result();
         $complexeData = $result->fetch_assoc();
 
+        // Si le complexe n'a pas encore de `family_id`, on lui attribue son propre ID comme famille
         if (!$complexeData['family_id']) {
-            // Si le complexe n'a pas encore de `family_id`, on lui donne son propre ID
             $stmt = $conn->prepare("UPDATE users SET family_id = ? WHERE id = ?");
             $stmt->bind_param("ii", $complexeId, $complexeId);
             $stmt->execute();
         }
 
-        // Stocker le token d'invitation
+        // Stocker le token d'invitation pour l'utilisateur invité
         $stmt = $conn->prepare("UPDATE users SET invitation_token = ? WHERE id = ?");
         $stmt->bind_param("si", $token, $userId);
         $stmt->execute();
 
+        // Retourner le token d'invitation généré
         return $token;
     }
+
+    // Retourner false si l'utilisateur n'a pas été trouvé
     return false;
 }
-function sendInvitationEmail($email, $complexeId) {
-    global $conn;
 
+
+// Fonction pour envoyer un email d'invitation à un utilisateur pour rejoindre une famille
+function sendInvitationEmail($email, $complexeId) {
+    global $conn;  
+
+    // Générer un token d'invitation
     $token = generateInvitation($complexeId, $email);
+    
+    // Si le token n'est pas généré (c'est-à-dire si l'utilisateur n'existe pas), retourner false
     if (!$token) return false;
 
+    // Créer une instance de PHPMailer pour envoyer l'email
     $mail = new PHPMailer(true);
     try {
+        // Configuration du serveur SMTP
         $mail->isSMTP();
-        $mail->Host = 'smtp.gmail.com';
+        $mail->Host = 'smtp.gmail.com';  // Hôte SMTP de Gmail
         $mail->SMTPAuth = true;
-        $mail->Username = 'emilienbouffart@gmail.com';
-        $mail->Password = 'yaremtiqdoyiviiv';
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = 587;
+        $mail->Username = 'emilienbouffart@gmail.com';  // Mon adresse email
+        $mail->Password = 'yaremtiqdoyiviiv';  // Mon mot de passe fais via mail
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;  // Sécurisation de la connexion
+        $mail->Port = 587;  // Port SMTP pour Gmail
 
+        // Paramètres de l'email
         $mail->setFrom('emilienbouffart@gmail.com', 'Plateforme Intelligente');
-        $mail->addAddress($email);
-        $mail->Subject = 'Invitation à rejoindre une famille';
+        $mail->addAddress($email); 
+        $mail->Subject = 'Invitation à rejoindre une famille';  // Sujet de l'email
         
-        $baseUrl = "http://localhost/Plateforme_Intelligente/Utilisateurs/";
-        $invitationLink = $baseUrl . "accept_invite.php?token=$token";
+        // Lien d'invitation
+        $baseUrl = "http://localhost/Plateforme_Intelligente/Utilisateurs/";  // URL de base pour l'invitation
+        $invitationLink = $baseUrl . "accept_invite.php?token=$token";  // Lien d'invitation avec le token généré
+        
+        // Corps de l'email avec le lien d'invitation
         $mail->Body = "Vous avez été invité à rejoindre une famille. Cliquez ici pour accepter : $invitationLink";
 
+        // Envoyer l'email
         $mail->send();
-        return true;
+        return true;  // Retourne true si l'email est envoyé avec succès
     } catch (Exception $e) {
+        // Si une exception est levée, retourner false
         return false;
     }
 }
+
+
+// Fonction pour retirer un utilisateur d'une famille (en mettant le family_id à NULL)
 function removeUserFromFamily($complexeId, $userId) {
-    global $conn;
+    global $conn;  
     
-    // Vérifier si l'utilisateur appartient bien à la famille
+    // Vérifier si l'utilisateur existe et obtenir son family_id
     $stmt = $conn->prepare("SELECT family_id FROM users WHERE id = ?");
     $stmt->bind_param("i", $userId);
     $stmt->execute();
     $result = $stmt->get_result();
-    $family = $result->fetch_assoc();
+    $family = $result->fetch_assoc();  // Récupère les données sous forme de tableau associatif
 
+    // Vérifie si l'utilisateur existe
     if (!$family) {
         echo "L'utilisateur n'existe pas !";
-        return false;
+        return false;  // Retourne false si l'utilisateur n'existe pas
     }
 
+    // Vérifie si l'utilisateur appartient bien à la famille du complexe spécifié
     if ($family['family_id'] == $complexeId) {
         echo "L'utilisateur appartient bien à cette famille.";
+    } else {
+        echo "L'utilisateur n'appartient pas à cette famille.";
+        return false;  // Retourne false si l'utilisateur n'appartient pas à la famille du complexe
     }
 
-    // Exécuter la mise à jour
+    // Exécuter la mise à jour pr retirer l'utilisateur de la famille
     $stmt = $conn->prepare("UPDATE users SET family_id = NULL WHERE id = ?");
     $stmt->bind_param("i", $userId);
-        
+
+    // Vérifier si la requête a été exécutée avec succès
     if ($stmt->execute()) {
         echo "Suppression réussie !";
-        return true;
+        return true;  // Retourne true si la suppression a réussi
     } else {
         echo "Erreur SQL  : " . $stmt->error;
-        return false;
+        return false;  // Retourne false si une erreur SQL se produit
     }
 }
-function getDeviceUsageStats($userId) {
-    global $conn;
 
+
+// Fonction pour récupérer les statistiques d'utilisation des appareils d'un utilisateur
+function getDeviceUsageStats($userId) {
+    global $conn;  
+
+    // Requête SQL pour récupérer les statistiques d'utilisation des appareils
     $query = "
         SELECT 
             d.name, d.type, d.status, 
-            COALESCE(SUM(dd.value), 0) AS consommation, 
-            COALESCE(COUNT(dd.id), 0) AS temps_utilisation
+            COALESCE(SUM(dd.value), 0) AS consommation,  // Somme des valeurs de consommation pour chaque appareil
+            COALESCE(COUNT(dd.id), 0) AS temps_utilisation  // Nombre de fois que l'appareil a été utilisé
         FROM devices d
-        LEFT JOIN device_data dd ON d.id = dd.device_id
-        WHERE d.user_id = ?
-        GROUP BY d.id
+        LEFT JOIN device_data dd ON d.id = dd.device_id  // Jointure avec la table device_data pour récupérer les données d'utilisation
+        WHERE d.user_id = ?  // Filtrer par l'ID de l'utilisateur
+        GROUP BY d.id  // Groupement par ID de l'appareil pour obtenir les statistiques de chaque appareil
     ";
 
+    // Préparer la requête SQL
     $stmt = $conn->prepare($query);
+    
+    // Lier l'ID de l'utilisateur à la requête préparée
     $stmt->bind_param("i", $userId);
     $stmt->execute();
+    
+    // Retourner les résultats sous forme de tableau associatif
     return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 }
+
+
+
+// Fonction pour mettre à jour le niveau d'un utilisateur en fonction de ses points
 function updateUserLevel($userId) {
-    global $conn;
+    global $conn;  // Utilise la connexion globale à la base de données
 
     // Récupérer le nombre de points de l'utilisateur
     $sql = "SELECT points FROM users WHERE id = ?";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $userId);
+    $stmt->bind_param("i", $userId);  // Lier l'ID de l'utilisateur à la requête
     $stmt->execute();
-    $result = $stmt->get_result()->fetch_assoc();
-    $points = $result['points'];
+    $result = $stmt->get_result()->fetch_assoc();  // Récupérer le résultat sous forme de tableau associatif
+    $points = $result['points'];  // Extraire les points
 
     // Déterminer le niveau en fonction des points
     $level = 'beginner';  // Par défaut, débutant
@@ -395,28 +491,30 @@ function updateUserLevel($userId) {
     // Mettre à jour le niveau de l'utilisateur
     $sqlLevel = "UPDATE users SET level = ? WHERE id = ?";
     $stmtLevel = $conn->prepare($sqlLevel);
-    $stmtLevel->bind_param("si", $level, $userId);
-    $stmtLevel->execute();
+    $stmtLevel->bind_param("si", $level, $userId);  // Lier le niveau et l'ID utilisateur
+    $stmtLevel->execute();  // Exécuter la mise à jour
 }
+
+// Fonction pour ajouter des points à un utilisateur et mettre à jour son niveau
 function updateUserPointsAndLevel($userId, $pointsAdded) {
-    global $conn;
+    global $conn;  
 
     // Ajouter des points à l'utilisateur
     $sql = "UPDATE users SET points = points + ? WHERE id = ?";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("di", $pointsAdded, $userId);
+    $stmt->bind_param("di", $pointsAdded, $userId);  // Lier les points à ajouter et l'ID utilisateur
     $stmt->execute();
 
-    // Mettre à jour le niveau en fonction des points
+    // Récupérer les points mis à jour pour l'utilisateur
     $sqlPoints = "SELECT points FROM users WHERE id = ?";
     $stmtPoints = $conn->prepare($sqlPoints);
-    $stmtPoints->bind_param("i", $userId);
+    $stmtPoints->bind_param("i", $userId);  // Lier l'ID de l'utilisateur
     $stmtPoints->execute();
-    $result = $stmtPoints->get_result()->fetch_assoc();
-    $points = $result['points'];
+    $result = $stmtPoints->get_result()->fetch_assoc();  // Extraire le nombre de points
+    $points = $result['points'];  // Nombre total de points après ajout
 
     // Déterminer le niveau en fonction des points
-    $level = 'beginner';
+    $level = 'beginner';  // Par défaut, débutant
     if ($points >= 0 && $points < 3) {
         $level = 'beginner';
     } elseif ($points >= 3 && $points < 5) {
@@ -430,22 +528,62 @@ function updateUserPointsAndLevel($userId, $pointsAdded) {
     // Mettre à jour le niveau de l'utilisateur
     $sqlLevel = "UPDATE users SET level = ? WHERE id = ?";
     $stmtLevel = $conn->prepare($sqlLevel);
-    $stmtLevel->bind_param("si", $level, $userId);
+    $stmtLevel->bind_param("si", $level, $userId);  // Lier le niveau et l'ID utilisateur
+    $stmtLevel->execute();  // Exécuter la mise à jour
+}
+
+
+// Fonction pour ajouter des points à un utilisateur et mettre à jour son niveau en fonction des points
+function updateUserPointsAndLevel($userId, $pointsAdded) {
+    global $conn;  
+
+    // Ajouter des points à l'utilisateur
+    $sql = "UPDATE users SET points = points + ? WHERE id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("di", $pointsAdded, $userId);  // Lier les paramètres : points et userId 
+    $stmt->execute();
+
+    // Récupérer les points mis à jour pour l'utilisateur
+    $sqlPoints = "SELECT points FROM users WHERE id = ?";
+    $stmtPoints = $conn->prepare($sqlPoints);
+    $stmtPoints->bind_param("i", $userId);  // Lier l'ID de l'utilisateur
+    $stmtPoints->execute();
+    $result = $stmtPoints->get_result()->fetch_assoc();  // Extraire les points
+    $points = $result['points'];  // Nombre total de points après ajout
+
+    // Déterminer le niveau de l'utilisateur en fonction des points
+    $level = 'beginner';  // Par défaut, débutant
+    if ($points >= 0 && $points < 3) {
+        $level = 'beginner';
+    } elseif ($points >= 3 && $points < 5) {
+        $level = 'intermediate';
+    } elseif ($points >= 5 && $points < 7) {
+        $level = 'advanced';
+    } elseif ($points >= 7) {
+        $level = 'expert';
+    }
+
+    // Mettre à jour le niveau de l'utilisateur
+    $sqlLevel = "UPDATE users SET level = ? WHERE id = ?";
+    $stmtLevel = $conn->prepare($sqlLevel);
+    $stmtLevel->bind_param("si", $level, $userId);  // Lier le niveau (chaîne) et l'ID utilisateur
     $stmtLevel->execute();
 }
-function checkDatabaseIntegrity() {
-    global $conn;
 
-    // Vérification des clés étrangères
+// Fonction pour vérifier l'intégrité de la base de données, notamment les clés étrangères
+function checkDatabaseIntegrity() {
+    global $conn;  // Utilise la connexion globale à la base de données
+
+    // Vérification des clés étrangères : si des appareils sont associés à des utilisateurs inexistants
     $stmt = $conn->prepare("SELECT COUNT(*) FROM devices WHERE user_id NOT IN (SELECT id FROM users)");
     $stmt->execute();
     $result = $stmt->get_result();
-    $invalidUsers = $result->fetch_assoc();
+    $invalidUsers = $result->fetch_assoc();  // Récupérer le nombre d'appareils associés à des utilisateurs inexistants
 
     if ($invalidUsers['COUNT(*)'] > 0) {
-        echo "Il y a des appareils associés à des utilisateurs inexistants.";
+        echo "Il y a des appareils associés à des utilisateurs inexistants.";  // Afficher un message si l'intégrité est violée
     } else {
-        echo "L'intégrité des données est vérifiée.";
+        echo "L'intégrité des données est vérifiée.";  // Afficher un message si l'intégrité des données est bonne
     }
 }
 
