@@ -495,43 +495,6 @@ function updateUserLevel($userId) {
     $stmtLevel->execute();  // Exécuter la mise à jour
 }
 
-// Fonction pour ajouter des points à un utilisateur et mettre à jour son niveau
-function updateUserPointsAndLevel($userId, $pointsAdded) {
-    global $conn;  
-
-    // Ajouter des points à l'utilisateur
-    $sql = "UPDATE users SET points = points + ? WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("di", $pointsAdded, $userId);  // Lier les points à ajouter et l'ID utilisateur
-    $stmt->execute();
-
-    // Récupérer les points mis à jour pour l'utilisateur
-    $sqlPoints = "SELECT points FROM users WHERE id = ?";
-    $stmtPoints = $conn->prepare($sqlPoints);
-    $stmtPoints->bind_param("i", $userId);  // Lier l'ID de l'utilisateur
-    $stmtPoints->execute();
-    $result = $stmtPoints->get_result()->fetch_assoc();  // Extraire le nombre de points
-    $points = $result['points'];  // Nombre total de points après ajout
-
-    // Déterminer le niveau en fonction des points
-    $level = 'beginner';  // Par défaut, débutant
-    if ($points >= 0 && $points < 3) {
-        $level = 'beginner';
-    } elseif ($points >= 3 && $points < 5) {
-        $level = 'intermediate';
-    } elseif ($points >= 5 && $points < 7) {
-        $level = 'advanced';
-    } elseif ($points >= 7) {
-        $level = 'expert';
-    }
-
-    // Mettre à jour le niveau de l'utilisateur
-    $sqlLevel = "UPDATE users SET level = ? WHERE id = ?";
-    $stmtLevel = $conn->prepare($sqlLevel);
-    $stmtLevel->bind_param("si", $level, $userId);  // Lier le niveau et l'ID utilisateur
-    $stmtLevel->execute();  // Exécuter la mise à jour
-}
-
 
 // Fonction pour ajouter des points à un utilisateur et mettre à jour son niveau en fonction des points
 function updateUserPointsAndLevel($userId, $pointsAdded) {
