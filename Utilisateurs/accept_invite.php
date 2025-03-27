@@ -19,11 +19,11 @@ if ($user = $result->fetch_assoc()) {
     $userId = $user['id']; // Récupère l'ID de l'utilisateur invité
 
     // Récupérer la `family_id` du chef de famille (l'invitant)
-    $stmt = $conn->prepare("SELECT family_id FROM users WHERE id = ?");
+    $stmt = $conn->prepare("SELECT family_id FROM users WHERE id = ?"); // préparation de la requête sql (évite les injonctions)
     $stmt->bind_param("i", $_SESSION['user_id']); 
     $stmt->execute();
     $result = $stmt->get_result();
-    $family = $result->fetch_assoc();
+    $family = $result->fetch_assoc(); // donne accès aux lignes renvoyées par la requête
 
     if ($family && $family['family_id']) {
         $familyId = $family['family_id'];
