@@ -394,6 +394,40 @@ function sendInvitationEmail($email, $complexeId) {
     }
 }
 
+// Fonction pour envoyer un email de la page contact.php
+function sendContactEmail($name, $email, $messageContent) {
+    // Créer une instance de PHPMailer
+    $mail = new PHPMailer(true);
+
+    try {
+        // Paramétrage du serveur SMTP
+        $mail->isSMTP();
+        $mail->Host = 'smtp.gmail.com';  // Utiliser le serveur SMTP de Gmail
+        $mail->SMTPAuth = true;
+        $mail->Username = 'emilienbouffart@gmail.com';  // Remplacez par votre adresse email
+        $mail->Password = 'yaremtiqdoyiviiv';  // Remplacez par votre mot de passe
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port = 587;
+
+        // Destinataire et expéditeur
+        $mail->setFrom('emilienbouffart@gmail.com', 'Plateforme Intelligente');
+        $mail->addAddress('destinataire@example.com');  // Adresse où vous voulez recevoir les messages
+        $mail->addReplyTo($email, $name);  // Réponse à l'email de l'utilisateur
+
+        // Contenu du message
+        $mail->isHTML(true);
+        $mail->Subject = 'Nouveau message de contact';
+        $mail->Body    = "Vous avez reçu un message de <strong>$name</strong> (<a href='mailto:$email'>$email</a>) :<br><br>$messageContent";
+
+        // Envoi du message
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        // Si l'email n'a pas pu être envoyé
+        return false;
+    }
+}
+
 
 // Fonction pour retirer un utilisateur d'une famille (en mettant le family_id à NULL)
 function removeUserFromFamily($complexeId, $userId) {
