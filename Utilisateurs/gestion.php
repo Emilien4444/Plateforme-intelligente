@@ -1,37 +1,38 @@
 <?php
 session_start();
-include '../BDD-Gestion/functions.php';
+include '../BDD-Gestion/functions.php'; 
 
-$userId = $_SESSION['user_id'];
-$userLevel = getUserLevel($userId);
+// Vérification si l'utilisateur est authentifié
+$userId = $_SESSION['user_id']; // Récupère l'ID de l'utilisateur connecté
+$userLevel = getUserLevel($userId); // Récupère le niveau de l'utilisateur 
 
-// Vérifier si l'utilisateur a le niveau approprié (avancé ou expert)
+// Verifie son niveau
 if ($userLevel != 'advanced' && $userLevel != 'expert') {
     header("Location: ../Principale/index.php");
-    exit();  // Si l'utilisateur n'a pas accès, rediriger vers la page principale
+    exit();  // Redirection vers la page principale si l'utilisateur n'a pas les droits d'accès
 }
 
-// Récupérer les objets connectés
-$sql = "SELECT * FROM devices WHERE user_id = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $userId);
-$stmt->execute();
-$devices = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+// Récupérer tous les appareils associés à l'utilisateur
+$sql = "SELECT * FROM devices WHERE user_id = ?"; // Requête SQL 
+$stmt = $conn->prepare($sql); 
+$stmt->bind_param("i", $userId); // Lie l'ID utilisateur à la requête
+$stmt->execute(); 
+$devices = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); // Récupère tous les appareils sous forme de tableau associatif
 
-// Récupérer les rapports d'utilisation des objets
+// Récupérer les statistiques de consommation des appareils
 $sqlStats = "SELECT device_id, SUM(consumption) AS total_consumption, AVG(current_temperature) AS avg_temperature FROM consumption_stats GROUP BY device_id";
-$stmtStats = $conn->prepare($sqlStats);
-$stmtStats->execute();
-$consumptionStats = $stmtStats->get_result()->fetch_all(MYSQLI_ASSOC);
-
+$stmtStats = $conn->prepare($sqlStats); 
+$stmtStats->execute(); 
+$consumptionStats = $stmtStats->get_result()->fetch_all(MYSQLI_ASSOC); // Récupère les statistiques sous forme de tableau associatif
 ?>
 
 <?php include '../Principale/header.php'; ?>
 
+
 <div class="container mt-5">
     <h2 class="text-center mb-4">⚙️ Gestion des Objets Connectés</h2>
 
-    <!-- Ajouter un objet connecté -->
+    <!-- Ajouter un nouvel objet connecté -->
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">
             Ajouter un nouvel objet connecté
@@ -48,43 +49,56 @@ $consumptionStats = $stmtStats->get_result()->fetch_all(MYSQLI_ASSOC);
             Objets Connectés
         </div>
         <div class="card-body">
-            <table class="table table-bordered">
-                <thead class="table-dark">
-                    <tr>
-                        <th>ID</th>
-                        <th>Nom</th>
-                        <th>Type</th>
-                        <th>Statut</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($devices as $device): ?>
+            <div id="app">
+                <table class="table table-bordered">
+                    <thead class="table-dark">
                         <tr>
-                            <td><?= htmlspecialchars($device['id']) ?></td>
-                            <td><?= htmlspecialchars($device['name']) ?></td>
-                            <td><?= htmlspecialchars($device['type']) ?></td>
+                            <th>ID</th>
+                            <th>Nom</th>
+                            <th>Type</th>
+                            <th>Statut</th>
+                            <th>Batterie (%)</th>
+                            <th>Actions</th>
+                            <th>Modifier</th> 
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Utilisation de Vue.js pour afficher dynamiquement les appareils -->
+                        <tr v-for="device in devices" :key="device.id">
+                            <td>{{ device.id }}</td>
+                            <td>{{ device.name }}</td>
+                            <td>{{ device.type }}</td>
                             <td>
-                                <span class="badge <?= $device['status'] == 'active' ? 'bg-success' : 'bg-danger' ?>">
-                                    <?= htmlspecialchars($device['status']) ?>
+                                <!-- Affichage du statut (actif ou inactif) avec une badge colorée -->
+                                <span class="badge" :class="device.status === 'active' ? 'bg-success' : 'bg-danger'">
+                                    {{ device.status }}
                                 </span>
                             </td>
                             <td>
-                                <a href="edit_device.php?id=<?= $device['id'] ?>" class="btn btn-warning btn-sm">Modifier</a>
-                                <a href="delete_device.php?id=<?= $device['id'] ?>" class="btn btn-danger btn-sm">Supprimer</a>
-                                <button class="btn toggle-btn btn-sm <?= ($device['status'] == 'active') ? 'btn-success' : 'btn-danger' ?>" 
-                                    data-id="<?= $device['id'] ?>" data-status="<?= $device['status'] ?>">
-                                    <?= ($device['status'] == 'active') ? 'Allumer' : 'Éteindre' ?>
+                                <!-- Affichage du niveau de batterie -->
+                                <span :class="device.status === 'active' ? 'text-success' : 'text-danger'">
+                                    {{ device.battery_status }}%
+                                </span>
+                            </td>
+                            <td>
+                                <!-- Bouton pour basculer l'état de l'appareil (actif/inactif) -->
+                                <button class="btn toggle-btn btn-sm" :class="device.status === 'active' ? 'btn-success' : 'btn-danger'" 
+                                        @click="toggleDeviceStatus(device)">
+                                    {{ device.status === 'active' ? 'Éteindre' : 'Allumer' }}
                                 </button>
                             </td>
+                            <td>
+                                <!-- Bouton pour modifier l'appareil -->
+                                <a :href="'edit_device.php?id=' + device.id" class="btn btn-warning btn-sm ms-2">Modifier</a> 
+                            </td>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    <!-- Rapports de consommation -->
+    <!-- Graphiques des rapports de consommation -->
     <div class="row">
         <div class="col-md-6">
             <h3>Consommation Totale</h3>
@@ -95,16 +109,100 @@ $consumptionStats = $stmtStats->get_result()->fetch_all(MYSQLI_ASSOC);
             <canvas id="temperatureChart"></canvas>
         </div>
     </div>
-
-
 </div>
+
 
 <?php include '../Principale/footer.php'; ?>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script> <!-- Inclusion de Vue.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Inclusion de Chart.js pour les graphiques -->
+
 <script>
+// Passer les données des appareils PHP à Vue.js
+const devices = <?php echo json_encode($devices); ?>;
+new Vue({
+    el: '#app', // Lien avec l'élément HTML ayant l'id 'app'
+    data: {
+        devices: devices, // Stocke les données des appareils
+        intervals: {} // Intervalles pour gérer la batterie
+    },
+    methods: {
+        // Méthode pour basculer l'état de l'appareil entre 'active' et 'inactive'
+        toggleDeviceStatus(device) {
+            if (device.status === 'active') {
+                device.status = 'inactive'; // Si actif -> désactiver
+                clearInterval(this.intervals[device.id]); // Arrêter le décompte de la batterie
+                this.startBatteryCharge(device); // Charger la batterie
+            } else {
+                device.status = 'active'; // Si inactif -> activer
+                this.startBatteryDrain(device); // Décharger la batterie
+            }
+            this.updateDeviceStatus(device); // Maj l'état dans la base de données
+        },
+        // Méthode pr vider la batterie
+        startBatteryDrain(device) {
+            this.intervals[device.id] = setInterval(() => {
+                if (device.battery_status > 0) {
+                    device.battery_status -= 1; // Réduire le niveau de batterie de 1 
+                    this.updateDeviceBatteryStatus(device); // Maj la batterie dans la base de données
+                } else {
+                    clearInterval(this.intervals[device.id]); // Arrêter si la batterie est vide
+                }
+            }, 1000); // Décharge la batterie toutes les secondes
+        },
+        // Méthode pr charger la batterie
+        startBatteryCharge(device) {
+            this.intervals[device.id] = setInterval(() => {
+                if (device.battery_status < 100) {
+                    device.battery_status += 1; // Augmenter le niveau de batterie
+                    this.updateDeviceBatteryStatus(device); // Maj la batterie dans la base de données
+                } else {
+                    clearInterval(this.intervals[device.id]); // Arrêter si la batterie est pleine
+                }
+            }, 1000); // Charge la batterie toutes les secondes
+        },
+        // Méthode pour maj l'état de l'appareil dans la base de données
+        updateDeviceStatus(device) {
+            fetch('update_device_status.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    device_id: device.id,
+                    status: device.status
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert('Erreur de mise à jour de l\'état de l\'appareil.');
+                }
+            })
+            .catch(error => console.error('Erreur:', error));
+        },
+        // Méthode pour maj la batterie dans la base de données
+        updateDeviceBatteryStatus(device) {
+            fetch('update_device_battery.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    device_id: device.id,
+                    battery_status: device.battery_status
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert('Erreur de mise à jour du niveau de batterie.');
+                }
+            })
+            .catch(error => console.error('Erreur:', error));
+        }
+    }
+});
+
+// Code pour générer les graphiques avec Chart.js
 document.addEventListener('DOMContentLoaded', function() {
-    // Graphique Consommation Totale
+    // Graphique de la consommation totale des appareils
     const consumptionCtx = document.getElementById('totalConsumptionChart').getContext('2d');
     const consumptionData = {
         labels: [<?php foreach ($consumptionStats as $stat) { echo "'" . $stat['device_id'] . "',"; } ?>],
@@ -126,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Graphique de Température Moyenne
+    // Graphique de la température moyenne
     const temperatureCtx = document.getElementById('temperatureChart').getContext('2d');
     const temperatureData = {
         labels: [<?php foreach ($consumptionStats as $stat) { echo "'" . $stat['device_id'] . "',"; } ?>],
@@ -148,40 +246,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-
-document.addEventListener('DOMContentLoaded', function() {
-    const toggleButtons = document.querySelectorAll('.toggle-btn');
-    toggleButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const deviceId = this.getAttribute('data-id');
-            const currentStatus = this.getAttribute('data-status');
-            
-            // Changer l'état (toggle ON/OFF)
-            const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-
-            // Envoyer une requête AJAX pour mettre à jour l'état dans la base de données
-            fetch('toggle_device_status.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ device_id: deviceId, status: newStatus })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Mettre à jour l'interface utilisateur
-                    this.innerText = newStatus === 'active' ? 'Éteindre' : 'Allumer';
-                    this.classList.toggle('btn-success');
-                    this.classList.toggle('btn-danger');
-                    this.setAttribute('data-status', newStatus);  // Mettre à jour de l'attribut de statut
-                } else {
-                    alert('Erreur lors de la mise à jour de l\'état.');
-                }
-            })
-            .catch(error => console.error('Erreur:', error));
-        });
-    });
-});
 </script>
-
+</body>
+</html>
