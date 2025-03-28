@@ -21,7 +21,6 @@ if (session_status() === PHP_SESSION_NONE) {
 </head>
 
 <body>
-//Encadre la section de l'en-tête de la page
 <header>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
