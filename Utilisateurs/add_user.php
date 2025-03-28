@@ -22,17 +22,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = $_POST['email'];
     $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
     $level = $_POST['level'];
+    $first_name = $_POST['first_name']; 
+    $last_name = $_POST['last_name'];   
+    $birthdate = $_POST['birthdate'];   
+    $gender = $_POST['gender'];         
 
     // Préparer et exécuter la requête d'insertion
-    $sql = "INSERT INTO users (username, email, password, level) VALUES (?, ?, ?, ?)";
+    $sql = "INSERT INTO users (username, email, password, first_name, last_name, birthdate, gender, level) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssss", $username, $email, $password, $level);
+    $stmt->bind_param("sssssiss", $username, $email, $password, $first_name, $last_name, $birthdate, $gender, $level);
     $stmt->execute();
 
     header("Location: manage_user.php");
     exit();
 }
-
 ?>
 
 <?php include '../Principale/header.php'; ?>
@@ -41,9 +45,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <h2>Ajouter un Utilisateur</h2>
 
     <form method="POST" action="">
-        <div class="form-group">
-            <label for="username">Nom d'utilisateur</label>
-            <input type="text" name="username" class="form-control" required>
+        <div class="mb-3">
+                <label for="first_name" class="form-label">Prénom</label>
+                <input type="text" id="first_name" name="first_name" class="form-control" required>
+        </div>
+        <div class="mb-3">
+                <label for="last_name" class="form-label">Nom</label>
+                <input type="text" id="last_name" name="last_name" class="form-control" required>
+        </div>
+        <div class="mb-3">
+                <label for="birthdate" class="form-label">Date de naissance</label>
+                <input type="date" id="birthdate" name="birthdate" class="form-control" required>
+        </div>
+        <div class="mb-3">
+                <label for="username" class="form-label">Nom d'utilisateur</label>
+                <input type="text" id="username" name="username" class="form-control" required>
         </div>
         <div class="form-group">
             <label for="email">Email</label>
@@ -60,6 +76,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <option value="advanced">Avancé</option>
                 <option value="expert">Expert</option>
             </select>
+        </div>
+        <div class="form-group">
+            <label for="gender">Genre</label>
+            <input type="text" name="gender" class="form-control" required>
         </div>
         <button type="submit" class="btn btn-primary mt-3">Ajouter l'utilisateur</button>
     </form>
