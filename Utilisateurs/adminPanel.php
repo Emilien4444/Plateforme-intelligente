@@ -131,17 +131,14 @@ $inactiveUsers = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                 <td><?= htmlspecialchars($device['name']) ?></td>
                                 <td><?= htmlspecialchars($device['type']) ?></td>
                                 <td>
-                                    <span class="badge <?= $device['status'] == 'actif' ? 'bg-success' : 'bg-danger' ?>">
-                                        <?= htmlspecialchars($device['status']) ?>
-                                    </span>
+                                    <button class="btn toggle-btn btn-sm <?= ($device['status'] == 'active') ? 'btn-success' : 'btn-danger' ?>" 
+                                        data-id="<?= $device['id'] ?>" data-status="<?= $device['status'] ?>">
+                                        <?= ($device['status'] == 'active') ? 'Allumer' : 'Éteindre' ?>
+                                    </button>
                                 </td>
                                 <td>
                                     <a href="edit_device.php?id=<?= $device['id'] ?>" class="btn btn-warning btn-sm">Modifier</a>
                                     <a href="delete_device.php?id=<?= $device['id'] ?>" class="btn btn-danger btn-sm">Supprimer</a>
-                                    <!-- Ajout d'un bouton pour changer le statut -->
-                                    <a href="toggle_device_status.php?id=<?= $device['id'] ?>" class="btn btn-secondary btn-sm">
-                                        <?= $device['status'] == 'actif' ? 'Désactiver' : 'Activer' ?>
-                                    </a>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -190,5 +187,43 @@ $inactiveUsers = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
         <?php include '../Principale/footer.php'; ?>
 
+
+<script>
+    // Gérer le clic sur le bouton ON/OFF
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleButtons = document.querySelectorAll('.toggle-btn');
+    toggleButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const deviceId = this.getAttribute('data-id');
+            const currentStatus = this.getAttribute('data-status');
+            
+            // Changer l'état (toggle ON/OFF)
+            const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+
+            // Envoyer une requête AJAX pour mettre à jour l'état dans la base de données
+            fetch('toggle_device_status.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ device_id: deviceId, status: newStatus })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Mettre à jour l'interface utilisateur
+                    this.innerText = newStatus === 'active' ? 'Éteindre' : 'Allumer';
+                    this.classList.toggle('btn-success');
+                    this.classList.toggle('btn-danger');
+                    this.setAttribute('data-status', newStatus);  // Mettre à jour de l'attribut de statut
+                } else {
+                    alert('Erreur lors de la mise à jour de l\'état.');
+                }
+            })
+            .catch(error => console.error('Erreur:', error));
+        });
+    });
+});
+</script>
     </body>
 </html>
