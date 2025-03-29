@@ -1,39 +1,42 @@
 <?php
-session_start();
+session_start(); // Démarre la session
 include '../BDD-Gestion/functions.php';
 
-// Vérification si l'utilisateur est administrateur
+// Vérification si l'utilisateur est connecté si non il est renvoyez à la page de connexion
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
 
+// Récupère le niveau de l'utilisateur à partir de l'ID
 $userId = $_SESSION['user_id'];
 $userLevel = getUserLevel($userId);
 
+// Vérification si l'utilisateur est administrateur
 if ($userLevel != 'expert') {
     header("Location: index.php");
-    exit();
+    exit(); // Si l'utilisateur n'a pas accès, rediriger vers la page principale
 }
 
 // Ajouter un utilisateur
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'];
     $email = $_POST['email'];
-    $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
+    $password = password_hash($_POST['password'], PASSWORD_BCRYPT);   // Hachage du mot de passe
     $level = $_POST['level'];
-    $first_name = $_POST['first_name']; 
+    $first_name = $_POST['first_name'];  
     $last_name = $_POST['last_name'];   
-    $birthdate = $_POST['birthdate'];   
+    $birthdate = $_POST['birthdate'];    
     $gender = $_POST['gender'];         
 
-    // Préparer et exécuter la requête d'insertion
+    // Préparer et exécuter la requête d'insertion des données dans le BDD
     $sql = "INSERT INTO users (username, email, password, first_name, last_name, birthdate, gender, level) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("sssssiss", $username, $email, $password, $first_name, $last_name, $birthdate, $gender, $level);
     $stmt->execute();
-
+    
+     // Redirection vers la page de gestion des utilisateurs après l'ajout
     header("Location: manage_user.php");
     exit();
 }
@@ -43,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="container mt-5">
     <h2>Ajouter un Utilisateur</h2>
-
+    
     <form method="POST" action="">
         <div class="mb-3">
                 <label for="first_name" class="form-label">Prénom</label>
