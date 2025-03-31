@@ -1,26 +1,27 @@
 <?php
-session_start();
-include '../BDD-Gestion/functions.php';
+session_start(); // Démarre une session 
+include '../BDD-Gestion/functions.php'; 
 
-// Vérification si l'utilisateur est administrateur
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit();
+// Vérification si l'utilisateur est authentifié
+if (!isset($_SESSION['user_id'])) { 
+    header("Location: login.php"); // Redirige vers la page de connexion si l'utilisateur n'est pas authentifié
+    exit(); 
 }
 
-$userId = $_SESSION['user_id'];
-$userLevel = getUserLevel($userId);
+$userId = $_SESSION['user_id']; // Récupère l'ID de l'utilisateur connecté
+$userLevel = getUserLevel($userId); // Vérifie le niveau de l'utilisateur 
 
+// Si l'utilisateur n'a pas le niveau "expert" -> rediriger vers la page principale
 if ($userLevel != 'expert') {
-    header("Location: index.php");
+    header("Location: index.php"); // Redirige vers la page principale
     exit();
 }
 
 // Récupérer la liste des utilisateurs
-$sql = "SELECT id, username, email, level, points FROM users";
-$stmt = $conn->prepare($sql);
-$stmt->execute();
-$users = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$sql = "SELECT id, username, email, level, points FROM users"; // Requête SQL pour récupérer la liste des utilisateurs
+$stmt = $conn->prepare($sql); 
+$stmt->execute(); 
+$users = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); // Récupère les résultats sous forme de tableau associatif
 
 ?>
 
