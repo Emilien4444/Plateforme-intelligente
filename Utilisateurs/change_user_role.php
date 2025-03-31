@@ -1,54 +1,56 @@
 <?php
-session_start();
-include '../BDD-Gestion/functions.php';
+session_start(); // Démarre la session 
+include '../BDD-Gestion/functions.php'; 
 
-// Vérification si l'utilisateur est administrateur
+// Vérification si l'utilisateur est connecté
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+    header("Location: login.php"); // Redirige l'utilisateur 
     exit();
 }
 
-$userId = $_SESSION['user_id'];
-$userLevel = getUserLevel($userId);
+$userId = $_SESSION['user_id']; // Récupère l'ID de l'utilisateur connecté
+$userLevel = getUserLevel($userId); // Récupère le niveau d'accès de l'utilisateur
 
+// Si l'utilisateur n'est pas un expert, rediriger vers la page principale
 if ($userLevel != 'expert') {
-    header("Location: index.php");
+    header("Location: index.php"); // Redirige vers la page principale si l'utilisateur n'a pas le niveau d'accès "expert"
     exit();
 }
 
-// Vérification si l'ID de l'utilisateur est passé en paramètre
+// Vérifier si l'ID de l'utilisateur à modifier est passé en paramètre dans l'URL
 if (isset($_GET['id'])) {
-    $userIdToChange = $_GET['id'];
+    $userIdToChange = $_GET['id']; // Récupère l'ID de l'utilisateur à modifier
 
-    // Récupérer les informations actuelles de l'utilisateur
+    // Récupérer les informations actuelles de l'utilisateur à partir de la BDD
     $sql = "SELECT id, username, email, level FROM users WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $userIdToChange);
-    $stmt->execute();
-    $user = $stmt->get_result()->fetch_assoc();
+    $stmt = $conn->prepare($sql); 
+    $stmt->bind_param("i", $userIdToChange); // Lie l'ID de l'utilisateur à la requête
+    $stmt->execute(); 
+    $user = $stmt->get_result()->fetch_assoc(); // Récupère les résultats sous forme de tableau associatif
 
-    // Si l'utilisateur n'existe pas
+    // Si l'utilisateur n'existe pas dans la BDD
     if (!$user) {
-        die("Utilisateur non trouvé.");
+        die("Utilisateur non trouvé."); // Arrête le script et affiche un message d'erreur
     }
 
-    // Mise à jour du rôle si le formulaire est soumis
+    // Vérifier si le formulaire a été soumis pour modifier le rôle de l'utilisateur
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $level = $_POST['level'];
+        $level = $_POST['level']; // Récupère le niveau sélectionné dans le formulaire
 
-        // Mise à jour du rôle de l'utilisateur
-        $sqlUpdate = "UPDATE users SET level = ? WHERE id = ?";
-        $stmtUpdate = $conn->prepare($sqlUpdate);
-        $stmtUpdate->bind_param("si", $level, $userIdToChange);
-        $stmtUpdate->execute();
+        // Maj du rôle de l'utilisateur dans la BDD
+        $sqlUpdate = "UPDATE users SET level = ? WHERE id = ?"; // Requête pour mettre à jour le niveau de l'utilisateur
+        $stmtUpdate = $conn->prepare($sqlUpdate); 
+        $stmtUpdate->bind_param("si", $level, $userIdToChange); // Lie les paramètres (niveau et ID utilisateur)
+        $stmtUpdate->execute(); 
 
-        header("Location: manage_user.php");
+        header("Location: manage_user.php"); // Redirige vers la page de gestion des utilisateurs après la mise à jour
         exit();
     }
 } else {
-    die("ID utilisateur non spécifié.");
+    die("ID utilisateur non spécifié."); // Si l'ID de l'utilisateur n'est pas passé dans l'URL, arrête le script
 }
 ?>
+
 
 <?php include '../Principale/header.php'; ?>
 
