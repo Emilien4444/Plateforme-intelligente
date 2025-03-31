@@ -1,17 +1,18 @@
 <?php
-session_start();
-include '../BDD-Gestion/functions.php';
+session_start(); // Démarre une session PHP 
+include '../BDD-Gestion/functions.php'; 
+
+
+$userId = $_SESSION['user_id']; // Récupère l'ID de l'utilisateur connecté
+$level = getUserLevel($userId); // Récupère le niveau de l'utilisateur
 
 // Vérifier que l'utilisateur a le niveau d'accès "expert"
-$userId = $_SESSION['user_id'];
-$level = getUserLevel($userId);
-
 if ($level != 'expert') {
-    header("Location: ../Principale/index.php");
-    exit();  // Si l'utilisateur n'a pas accès, rediriger vers la page principale
+    header("Location: ../Principale/index.php"); // Redirection vers la page principale si l'utilisateur n'a pas les droits d'accès
+    exit();  
 }
-
 ?>
+
 
 <?php include '../Principale/header.php'; ?>
 
