@@ -1,30 +1,35 @@
 <?php
-session_start();
+session_start(); // Démarre session PHP
 include '../BDD-Gestion/functions.php';
 
-$message = ""; // Stocke les erreurs ou succès
+$message = ""; // Variable pour stocker les messages d'erreur ou de succès
 
+// Vérification si le formulaire a été soumis via POST
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = trim($_POST['email']);
-    $password = $_POST['password'];
+    $email = trim($_POST['email']); // Récupère et nettoie l'email entré dans le formulaire
+    $password = $_POST['password']; // Récupère le mdp entré dans le formulaire
 
+    // Appel de la fonction loginUser pour vérifier l'email et le mdp
     $user = loginUser($email, $password);
 
+    // Si un utilisateur est trouvé avec les infos fournies
     if ($user) {
-        $_SESSION['user_id'] = $user['id']; // Stocke uniquement l'ID
-        $_SESSION['user_role'] = $user['role']; // Stocke le rôle récupéré
+        $_SESSION['user_id'] = $user['id']; // Stocke l'ID de l'utilisateur dans la session
+        $_SESSION['user_role'] = $user['role']; // Stocke le rôle de l'utilisateur dans la session
 
+        // Ajoute un log pour enregistrer la connexion de l'utilisateur
         addLog($_SESSION['user_id'], "Connexion réussie");
 
+        // Redirection vers le dashboard après une connexion réussie
         header("Location: dashboard.php");
-        exit();
+        exit(); 
     } else {
+        // Si les onfos sont incorrectes -> message d'erreur
         $message = '<div class="alert alert-danger text-center"> Email ou mot de passe incorrect.</div>';
     }
 }
-
-
 ?>
+
 
 <?php include '../Principale/header.php'; ?>
 
