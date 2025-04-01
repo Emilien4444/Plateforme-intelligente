@@ -1,5 +1,6 @@
 <?php
 session_start(); // Démarre la session
+include '../BDD-Gestion/functions.php';
 
 // Vérification de la session utilisateur
 if (!isset($_SESSION['user_id'])) { // Si l'utilisateur n'est pas connecté -> redirige vers la page de connexion
