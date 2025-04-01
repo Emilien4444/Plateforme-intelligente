@@ -1,24 +1,23 @@
 <?php
 session_start();
-include '../BDD-Gestion/functions.php';
+include '../BDD-Gestion/functions.php'; // Inclut les fonctions nécessaires pour interagir avec la BDD
 
-// Vérifier si l'utilisateur est connecté
+// Vérifie si l'utilisateur est connecté
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+    header("Location: login.php"); // Si l'utilisateur n'est pas connecté -> redirige vers la page de connexion
     exit();
 }
 
-// Récupérer l'ID de l'utilisateur
-$userId = $_SESSION['user_id'];
-$userLevel = getUserLevel($userId);
+$userId = $_SESSION['user_id']; // Récupère l'ID de l'utilisateur connecté
+$userLevel = getUserLevel($userId); // Récupère le niveau d'accès de l'utilisateur (ex: "advanced" ou "expert")
 
-// Vérifier si l'utilisateur a le niveau approprié (avancé ou expert)
+// Vérifie si l'utilisateur a le niveau d'accès approprié pour voir le rapport
 if ($userLevel != 'advanced' && $userLevel != 'expert') {
-    header("Location: ../Principale/index.php");
-    exit();  // Si l'utilisateur n'a pas accès, rediriger vers la page principale
+    header("Location: ../Principale/index.php"); // Si l'utilisateur n'a pas accès -> redirigé vers la page principale
+    exit();
 }
 
-// Récupérer les rapports de consommation quotidienne ou hebdomadaire
+// Récupérer les rapports de consommation sans filtre de date pour tjr afficher quelque chose 
 $sql = "SELECT cs.device_id, d.name, 
                 SUM(cs.consumption) as total_consumption, 
                 AVG(cs.current_temperature) as avg_temperature, 
@@ -27,58 +26,39 @@ $sql = "SELECT cs.device_id, d.name,
         FROM consumption_stats cs
         JOIN devices d ON cs.device_id = d.id
         WHERE cs.user_id = ? 
-        AND cs.date BETWEEN ? AND ?
-        GROUP BY cs.device_id";
-
-// Calculer les dates de début et de fin pour la période souhaitée
-$startDate = date('Y-m-d', strtotime('-7 days')); // 7 derniers jours
-$endDate = date('Y-m-d', strtotime('today')); // Aujourd'hui
-
+        GROUP BY cs.device_id";  // Sélectionne les statistiques de consommation et les informations sur les appareils de l'utilisateur
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("iss", $userId, $startDate, $endDate); // Assurez-vous que les dates sont bien passées en format 'YYYY-MM-DD'
-$stmt->execute();
-$consumptionStats = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->bind_param("i", $userId); // Lier l'ID de l'utilisateur à la requête
+$stmt->execute();  
+$consumptionStats = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); // Récupère les résultats sous forme de tableau associatif
 
 // Vérification des données récupérées
 if (!$consumptionStats) {
-    die("Aucune donnée de consommation trouvée.");
+    die("Aucune donnée de consommation trouvée."); // Si aucune donnée n'est trouvée -> message d'erreur est affiché
 }
-
-// Récupérer les objets inefficaces (par exemple, avec une consommation élevée)
-$sqlInefficient = "SELECT device_id, SUM(consumption) as total_consumption
-                   FROM consumption_stats 
-                   GROUP BY device_id
-                   HAVING total_consumption > ?";
-
-$stmtInefficient = $conn->prepare($sqlInefficient);
-$threshold = 100;  // Seuil de consommation élevé
-$stmtInefficient->bind_param("i", $threshold);
-$stmtInefficient->execute();
-$inefficientDevices = $stmtInefficient->get_result()->fetch_all(MYSQLI_ASSOC);
 
 // Récupérer l'historique des objets connectés
 $sqlHistory = "SELECT cs.device_id, d.name, cs.usage_time, cs.consumption, d.target_temperature, cs.current_temperature
                FROM consumption_stats cs
                JOIN devices d ON cs.device_id = d.id
                WHERE cs.user_id = ?
-               ORDER BY cs.usage_time DESC";
+               ORDER BY cs.usage_time DESC";  // Récupère l'historique des appareils avec leur consommation et température
 $stmtHistory = $conn->prepare($sqlHistory);
-$stmtHistory->bind_param("i", $userId);
-$stmtHistory->execute();
-$historyData = $stmtHistory->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmtHistory->bind_param("i", $userId); // Lier l'ID de l'utilisateur à la requête
+$stmtHistory->execute();  // Exécute la requête SQL
+$historyData = $stmtHistory->get_result()->fetch_all(MYSQLI_ASSOC); // Récupère les résultats sous forme de tableau associatif
 
-// Récupérer les données sur le niveau de batterie des objets
+// Récupérer les données sur le niveau de batterie des appareils
 $sqlBattery = "SELECT d.name, d.battery_status
                FROM devices d
-               WHERE d.user_id = ?";
+               WHERE d.user_id = ?";  // Récupère les niveaux de batterie des appareils
 $stmtBattery = $conn->prepare($sqlBattery);
-$stmtBattery->bind_param("i", $userId);
-$stmtBattery->execute();
-$batteryStats = $stmtBattery->get_result()->fetch_all(MYSQLI_ASSOC);
-
+$stmtBattery->bind_param("i", $userId); // Lier l'ID de l'utilisateur à la requête
+$stmtBattery->execute();  // Exécute la requête SQL
+$batteryStats = $stmtBattery->get_result()->fetch_all(MYSQLI_ASSOC); // Récupère les résultats sous forme de tableau associatif
 ?>
 
-<?php include '../Principale/header.php'; ?>
+<?php include '../Principale/header.php'; ?>  <!-- Inclut l'en-tête de la page -->
 
 <div class="container mt-5">
     <h2>Rapports d'utilisation des objets connectés</h2>
@@ -87,7 +67,7 @@ $batteryStats = $stmtBattery->get_result()->fetch_all(MYSQLI_ASSOC);
     <div class="card mb-4">
         <div class="card-header">Rapport de Consommation</div>
         <div class="card-body">
-            <canvas id="consumptionChart" style="max-width: 500px; max-height: 500px;"></canvas>
+            <canvas id="consumptionChart" style="max-width: 500px; max-height: 500px;"></canvas> <!-- Graphique pour la consommation totale -->
         </div>
     </div>
 
@@ -95,7 +75,7 @@ $batteryStats = $stmtBattery->get_result()->fetch_all(MYSQLI_ASSOC);
     <div class="card mb-4">
         <div class="card-header">Température Moyenne</div>
         <div class="card-body">
-            <canvas id="temperatureChart" style="max-width: 500px; max-height: 500px;"></canvas>
+            <canvas id="temperatureChart" style="max-width: 500px; max-height: 500px;"></canvas> <!-- Graphique pour la température moyenne -->
         </div>
     </div>
     
@@ -103,7 +83,7 @@ $batteryStats = $stmtBattery->get_result()->fetch_all(MYSQLI_ASSOC);
     <div class="card mb-4">
         <div class="card-header">État de la Batterie</div>
         <div class="card-body">
-            <canvas id="batteryChart" style="max-width: 500px; max-height: 500px;"></canvas>
+            <canvas id="batteryChart" style="max-width: 500px; max-height: 500px;"></canvas> <!-- Graphique pour le niveau de batterie -->
         </div>
     </div>
 
@@ -153,7 +133,16 @@ $batteryStats = $stmtBattery->get_result()->fetch_all(MYSQLI_ASSOC);
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// Après le chargement du document, générer les graphiques
 document.addEventListener('DOMContentLoaded', function() {
+    // Fonction pour générer une couleur aléatoire
+    function randomColor() {
+        const r = Math.floor(Math.random() * 256); // Valeur aléatoire pour le rouge
+        const g = Math.floor(Math.random() * 256); // Valeur aléatoire pour le vert
+        const b = Math.floor(Math.random() * 256); // Valeur aléatoire pour le bleu
+        return `rgba(${r}, ${g}, ${b}, 0.6)`; // Retourne la couleur en format rgba avec transparence
+    }
+
     // Graphique de consommation totale (Camembert)
     const consumptionCtx = document.getElementById('consumptionChart').getContext('2d');
     const consumptionData = {
@@ -161,15 +150,15 @@ document.addEventListener('DOMContentLoaded', function() {
         datasets: [{
             label: 'Consommation Totale (kWh)',
             data: [<?php foreach ($consumptionStats as $data) { echo $data['total_consumption'] . ","; } ?>],
-            backgroundColor: [
-                "rgba(75, 192, 192, 0.6)",
-                "rgba(153, 102, 255, 0.6)",
-                "rgba(255, 159, 64, 0.6)"
-            ]
+            backgroundColor: [] // Tableau de couleurs dynamiques
         }]
     };
+
+    // Générer une couleur différente pour chaque segment
+    consumptionData.datasets[0].backgroundColor = consumptionData.labels.map(() => randomColor());
+
     new Chart(consumptionCtx, {
-        type: 'pie',  // Changement ici pour un graphique camembert
+        type: 'pie',  // Graphique camembert
         data: consumptionData,
         options: {
             responsive: true
@@ -183,15 +172,15 @@ document.addEventListener('DOMContentLoaded', function() {
         datasets: [{
             label: 'Température Moyenne (°C)',
             data: [<?php foreach ($consumptionStats as $data) { echo $data['avg_temperature'] . ","; } ?>],
-            backgroundColor: [
-                "rgba(153, 102, 255, 0.6)",
-                "rgba(75, 192, 192, 0.6)",
-                "rgba(255, 159, 64, 0.6)"
-            ]
+            backgroundColor: [] // Tableau de couleurs dynamiques
         }]
     };
+
+    // Générer une couleur différente pour chaque segment
+    temperatureData.datasets[0].backgroundColor = temperatureData.labels.map(() => randomColor());
+
     new Chart(temperatureCtx, {
-        type: 'pie',  // Changement ici pour un graphique camembert
+        type: 'pie',  // Graphique camembert
         data: temperatureData,
         options: {
             responsive: true
@@ -205,15 +194,15 @@ document.addEventListener('DOMContentLoaded', function() {
         datasets: [{
             label: 'Niveau de Batterie (%)',
             data: [<?php foreach ($batteryStats as $data) { echo $data['battery_status'] . ","; } ?>],
-            backgroundColor: [
-                "rgba(255, 99, 132, 0.6)",
-                "rgba(54, 162, 235, 0.6)",
-                "rgba(255, 206, 86, 0.6)"
-            ]
+            backgroundColor: [] // Tableau de couleurs dynamiques
         }]
     };
+
+    // Générer une couleur différente pour chaque segment
+    batteryData.datasets[0].backgroundColor = batteryData.labels.map(() => randomColor());
+
     new Chart(batteryCtx, {
-        type: 'pie',  // Changement ici pour un graphique camembert
+        type: 'pie',  // Graphique camembert
         data: batteryData,
         options: {
             responsive: true
