@@ -39,10 +39,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $status = trim($_POST['status']);
         $location = trim($_POST['location']);
 
-        // Maj de l'objet dans la base de données
         $sql = "UPDATE devices SET name = ?, type = ?, brand = ?, connectivity = ?, battery_status = ?, target_temperature = ?, mode = ?, status = ?, location = ? WHERE id = ? AND user_id = ?";
         $stmt = $conn->prepare($sql); 
-        $stmt->bind_param("sssssssssssi", $name, $type, $brand, $connectivity, $battery_status, $target_temperature, $mode, $status, $location, $deviceId, $userId); // Lier les paramètres à la requête
+        $stmt->bind_param("sssssdsssii", $name, $type, $brand, $connectivity, $battery_status, $target_temperature, $mode, $status, $location, $deviceId, $userId);
 
         if ($stmt->execute()) {
             $message = '<div class="alert alert-success text-center">✅ Objet connecté mis à jour avec succès.</div>'; // Message de succès si la maj réussit
@@ -100,17 +99,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <!-- Affichage du message -->
     <?php if ($message) echo $message; ?>
+    
 
     <div class="card shadow p-3 mb-4">
     <!-- Formulaire de modification de l'objet -->
     <form method="POST">
         <input type="hidden" name="device_id" value="<?= $device['id'] ?>">
-
-        <!-- Bouton ON/OFF -->
-        <button type="submit" name="toggle_status" class="btn btn-<?= ($device['status'] == 'actif') ? 'success' : 'danger' ?>" 
-            data-id="<?= $deviceId ?>" data-status="<?= $device['status'] ?>">
-            <?= ($device['status'] == 'actif') ? 'Allumer' : 'Éteindre' ?>
-        </button>
 
         <p id="status-message"></p>
         
