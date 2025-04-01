@@ -411,7 +411,7 @@ function sendContactEmail($name, $email, $messageContent) {
 
         // Destinataire et expéditeur
         $mail->setFrom('emilienbouffart@gmail.com', 'Plateforme Intelligente');
-        $mail->addAddress('destinataire@example.com');  // Adresse où vous voulez recevoir les messages
+        $mail->addAddress($email);  // Adresse où vous voulez recevoir les messages
         $mail->addReplyTo($email, $name);  // Réponse à l'email de l'utilisateur
 
         // Contenu du message
