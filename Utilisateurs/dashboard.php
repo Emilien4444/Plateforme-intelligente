@@ -120,14 +120,6 @@ updateUserLevel($userId); // Appelle une fonction pour maj le niveau de l'utilis
                     <strong><?= htmlspecialchars($device['name']) ?></strong> - <?= htmlspecialchars($device['type']) ?> <!-- Affiche le nom et le type de l'appareil -->
                 </div>
                 <div class="d-flex">
-                    <!-- Bouton ON/OFF (affiché si l'utilisateur est 'advanced' ou 'expert') -->
-                    <?php if ($level == 'advanced' || $level == 'expert'): ?>
-                        <button class="btn toggle-btn btn-sm <?= ($device['status'] == 'active') ? 'btn-success' : 'btn-danger' ?>" 
-                            data-id="<?= $device['id'] ?>" data-status="<?= $device['status'] ?>">
-                            <?= ($device['status'] == 'active') ? 'Allumer' : 'Éteindre' ?>
-                        </button>
-                    <?php endif; ?>
-
                     <!-- Bouton Détails - Ouvre un modal pour afficher les informations de l'appareil -->
                     <button class="btn btn-info btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#deviceModal"
                         data-id="<?= $device['id'] ?>"
@@ -198,41 +190,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Gérer le clic sur le bouton ON/OFF
-document.addEventListener('DOMContentLoaded', function() {
-    const toggleButtons = document.querySelectorAll('.toggle-btn');
-    toggleButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const deviceId = this.getAttribute('data-id');
-            const currentStatus = this.getAttribute('data-status');
-            
-            // Changer l'état (toggle ON/OFF)
-            const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-
-            // Envoyer une requête AJAX pour maj l'état dans la base de données
-            fetch('toggle_device_status.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ device_id: deviceId, status: newStatus })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Mettre à jour l'interface utilisateur
-                    this.innerText = newStatus === 'active' ? 'Éteindre' : 'Allumer';
-                    this.classList.toggle('btn-success');
-                    this.classList.toggle('btn-danger');
-                    this.setAttribute('data-status', newStatus);  // Maj de l'attribut de statut
-                } else {
-                    alert('Erreur lors de la mise à jour de l\'état.');
-                }
-            })
-            .catch(error => console.error('Erreur:', error));
-        });
-    });
-});
 </script>
 
 <?php include '../Principale/footer.php'; ?> 
