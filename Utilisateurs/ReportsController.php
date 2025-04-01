@@ -1,21 +1,21 @@
 <?php
-session_start();
-include '../BDD-Gestion/functions.php';
+session_start(); // Démarre la session
 
 // Vérification de la session utilisateur
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit();
+if (!isset($_SESSION['user_id'])) { // Si l'utilisateur n'est pas connecté -> redirige vers la page de connexion
+    header("Location: login.php"); // Redirige vers la page de connexion
+    exit(); 
 }
 
-$userId = $_SESSION['user_id'];
-$level = getUserLevel($userId);
+$userId = $_SESSION['user_id']; // Récupère l'ID de l'utilisateur connecté
+$level = getUserLevel($userId); // Récupère le niveau d'accès de l'utilisateur (ex: "advanced" ou "expert")
 
-// Si l'utilisateur n'a pas le niveau "expert", on le redirige
-if ($level != 'expert') {
-    header("Location: index.php");
-    exit();
+// Si l'utilisateur n'a pas le niveau "expert" -> on le redirige
+if ($level != 'expert') { // Vérifie si l'utilisateur n'a pas le niveau approprié
+    header("Location: index.php"); // Si l'utilisateur n'a pas accès -> redirige vers la page principale
+    exit(); 
 }
+
 
 // Requête pour obtenir les statistiques de consommation par objet connecté
 $sqlStats = "
@@ -30,10 +30,11 @@ $sqlStats = "
     WHERE d.user_id = ?
     GROUP BY d.id
 ";
-$stmt = $conn->prepare($sqlStats);
-$stmt->bind_param("i", $userId);
-$stmt->execute();
-$usageStats = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt = $conn->prepare($sqlStats); 
+$stmt->bind_param("i", $userId); // Lier l'ID de l'utilisateur à la requête SQL
+$stmt->execute();  
+$usageStats = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); // Récupère les résultats sous forme de tableau associatif
+
 
 // Historique des données des objets connectés
 $sqlHistory = "
@@ -47,23 +48,24 @@ $sqlHistory = "
     ORDER BY cs.usage_time DESC
 ";
 $stmtHistory = $conn->prepare($sqlHistory);
-$stmtHistory->bind_param("i", $userId);
-$stmtHistory->execute();
-$historyData = $stmtHistory->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmtHistory->bind_param("i", $userId); // Lier l'ID de l'utilisateur à la requête
+$stmtHistory->execute();  
+$historyData = $stmtHistory->get_result()->fetch_all(MYSQLI_ASSOC); // Récupère les résultats sous forme de tableau associatif
+
 
 // Génération d'un rapport CSV
 if (isset($_POST['export_csv'])) {
-    $csvFile = fopen('php://output', 'w');
-    header('Content-Type: text/csv');
-    header('Content-Disposition: attachment;filename="rapport_statistiques.csv"');
+    $csvFile = fopen('php://output', 'w'); // Ouvre un flux pour écrire le fichier CSV
+    header('Content-Type: text/csv'); // Définit l'en-tête pour le type de contenu CSV
+    header('Content-Disposition: attachment;filename="rapport_statistiques.csv"'); // Définit le nom du fichier CSV
 
-    fputcsv($csvFile, ['Nom', 'Type', 'Consommation Totale', 'Nombre d\'Utilisation', 'Température Moyenne']);
+    fputcsv($csvFile, ['Nom', 'Type', 'Consommation Totale', 'Nombre d\'Utilisation', 'Température Moyenne']); // Écrit les en-têtes du CSV
 
     foreach ($usageStats as $stat) {
-        fputcsv($csvFile, $stat);
+        fputcsv($csvFile, $stat); // Écrit les données des statistiques dans le fichier CSV
     }
-    fclose($csvFile);
-    exit();
+    fclose($csvFile); // Ferme le fichier CSV
+    exit(); // Interrompt l'exécution après le téléchargement du fichier
 }
 ?>
 
