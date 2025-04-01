@@ -135,75 +135,78 @@ $batteryStats = $stmtBattery->get_result()->fetch_all(MYSQLI_ASSOC); // Récupè
 <script>
 // Après le chargement du document, générer les graphiques
 document.addEventListener('DOMContentLoaded', function() {
-    // Fonction pour générer une couleur aléatoire
+    // Fonction pour générer une couleur aléatoire en format RGBA avec transparence
     function randomColor() {
-        const r = Math.floor(Math.random() * 256); // Valeur aléatoire pour le rouge
-        const g = Math.floor(Math.random() * 256); // Valeur aléatoire pour le vert
-        const b = Math.floor(Math.random() * 256); // Valeur aléatoire pour le bleu
-        return `rgba(${r}, ${g}, ${b}, 0.6)`; // Retourne la couleur en format rgba avec transparence
+        const r = Math.floor(Math.random() * 256); // Génère une valeur aléatoire pour le rouge
+        const g = Math.floor(Math.random() * 256); // Génère une valeur aléatoire pour le vert
+        const b = Math.floor(Math.random() * 256); // Génère une valeur aléatoire pour le bleu
+        return `rgba(${r}, ${g}, ${b}, 0.6)`; // Retourne la couleur en format rgba avec une transparence de 60%
     }
 
-    // Graphique de consommation totale (Camembert)
-    const consumptionCtx = document.getElementById('consumptionChart').getContext('2d');
+    // Graphique de consommation totale (Camembert) : Affiche la consommation totale de chaque appareil
+    const consumptionCtx = document.getElementById('consumptionChart').getContext('2d'); // Sélectionne le canevas pour afficher le graphique
     const consumptionData = {
-        labels: [<?php foreach ($consumptionStats as $data) { echo "'" . $data['name'] . "',"; } ?>],
+        labels: [<?php foreach ($consumptionStats as $data) { echo "'" . $data['name'] . "',"; } ?>], // Récupère les noms des appareils à afficher comme labels
         datasets: [{
-            label: 'Consommation Totale (kWh)',
-            data: [<?php foreach ($consumptionStats as $data) { echo $data['total_consumption'] . ","; } ?>],
-            backgroundColor: [] // Tableau de couleurs dynamiques
+            label: 'Consommation Totale (kWh)', // Titre du graphique
+            data: [<?php foreach ($consumptionStats as $data) { echo $data['total_consumption'] . ","; } ?>], // Récupère les données de consommation totale
+            backgroundColor: [] // Tableau vide pour stocker les couleurs dynamiques pour chaque segment
         }]
     };
 
-    // Générer une couleur différente pour chaque segment
-    consumptionData.datasets[0].backgroundColor = consumptionData.labels.map(() => randomColor());
+    // Générer une couleur différente pour chaque segment (chaque appareil)
+    consumptionData.datasets[0].backgroundColor = consumptionData.labels.map(() => randomColor()); // Applique une couleur aléatoire pour chaque segment du graphique
 
+    // Création du graphique de consommation totale
     new Chart(consumptionCtx, {
-        type: 'pie',  // Graphique camembert
-        data: consumptionData,
+        type: 'pie',  // Type de graphique ->  Camembert
+        data: consumptionData, // Données à afficher dans le graphique
         options: {
-            responsive: true
+            responsive: true // Rendre le graphique responsive pour s'adapter à la taille de l'écran
         }
     });
 
-    // Graphique de température moyenne (Camembert)
-    const temperatureCtx = document.getElementById('temperatureChart').getContext('2d');
+    // Graphique de température moyenne (Camembert) : Affiche la température moyenne de chaque appareil
+    const temperatureCtx = document.getElementById('temperatureChart').getContext('2d'); // Sélectionne le canevas pour afficher le graphique
     const temperatureData = {
-        labels: [<?php foreach ($consumptionStats as $data) { echo "'" . $data['name'] . "',"; } ?>],
+        labels: [<?php foreach ($consumptionStats as $data) { echo "'" . $data['name'] . "',"; } ?>], // Récupère les noms des appareils
         datasets: [{
-            label: 'Température Moyenne (°C)',
-            data: [<?php foreach ($consumptionStats as $data) { echo $data['avg_temperature'] . ","; } ?>],
-            backgroundColor: [] // Tableau de couleurs dynamiques
+            label: 'Température Moyenne (°C)', // Titre du graphique
+            data: [<?php foreach ($consumptionStats as $data) { echo $data['avg_temperature'] . ","; } ?>], // Récupère les températures moy des appareils
+            backgroundColor: [] // Tableau vide pour stocker les couleurs dynamiques
         }]
     };
 
-    // Générer une couleur différente pour chaque segment
-    temperatureData.datasets[0].backgroundColor = temperatureData.labels.map(() => randomColor());
+    // Générer une couleur différente pour chaque segment (chaque appareil)
+    temperatureData.datasets[0].backgroundColor = temperatureData.labels.map(() => randomColor()); // Applique une couleur aléatoire pour chaque segment du graphique
 
+    // Création du graphique de température moy
     new Chart(temperatureCtx, {
-        type: 'pie',  // Graphique camembert
-        data: temperatureData,
+        type: 'pie',  // Type de graphique ->  Camembert
+        data: temperatureData, // Données à afficher dans le graphique
         options: {
             responsive: true
         }
     });
 
-    // Graphique de niveau de batterie (Camembert)
-    const batteryCtx = document.getElementById('batteryChart').getContext('2d');
+    // Graphique de niveau de batterie (Camembert) : Affiche le niveau de batterie de chaque appareil
+    const batteryCtx = document.getElementById('batteryChart').getContext('2d'); // Sélectionne le canevas pour afficher le graphique
     const batteryData = {
-        labels: [<?php foreach ($batteryStats as $data) { echo "'" . $data['name'] . "',"; } ?>],
+        labels: [<?php foreach ($batteryStats as $data) { echo "'" . $data['name'] . "',"; } ?>], // Récupère les noms des appareils
         datasets: [{
-            label: 'Niveau de Batterie (%)',
-            data: [<?php foreach ($batteryStats as $data) { echo $data['battery_status'] . ","; } ?>],
-            backgroundColor: [] // Tableau de couleurs dynamiques
+            label: 'Niveau de Batterie (%)', // Libellé du graphique
+            data: [<?php foreach ($batteryStats as $data) { echo $data['battery_status'] . ","; } ?>], // Récupère les niveaux de batterie des appareils
+            backgroundColor: [] // Tableau vide pour stocker les couleurs dynamiques
         }]
     };
 
-    // Générer une couleur différente pour chaque segment
-    batteryData.datasets[0].backgroundColor = batteryData.labels.map(() => randomColor());
+    // Générer une couleur différente pour chaque segment (chaque appareil)
+    batteryData.datasets[0].backgroundColor = batteryData.labels.map(() => randomColor()); // Applique une couleur aléatoire pour chaque segment du graphique
 
+    // Création du graphique de niveau de batterie
     new Chart(batteryCtx, {
-        type: 'pie',  // Graphique camembert
-        data: batteryData,
+        type: 'pie',  // Type de graphique -> Camembert
+        data: batteryData, // Données à afficher dans le graphique
         options: {
             responsive: true
         }
