@@ -120,6 +120,7 @@ $consumptionStats = $stmtStats->get_result()->fetch_all(MYSQLI_ASSOC); // Récup
 <script>
 // Passer les données des appareils PHP à Vue.js
 const devices = <?php echo json_encode($devices); ?>;
+
 new Vue({
     el: '#app',
     data: {
@@ -129,19 +130,47 @@ new Vue({
     methods: {
         // Méthode pour basculer l'état de l'appareil entre 'active' et 'inactive'
         toggleDeviceStatus(device) {
-            if (device.status === 'active') {
-                device.status = 'inactive'; // Si actif -> désactiver
-                clearInterval(this.intervals[device.id]); // Arrêter le décompte de la batterie, température et consommation
-                this.startBatteryCharge(device); // Charger la batterie
-                this.startTemperatureRecovery(device); // Remonter la température
-                this.startConsumptionDecrease(device); // Diminuer la consommation
-            } else {
-                device.status = 'active'; // Si inactif -> activer
+            // Conserver le statut original pour revenir en arrière si nécessaire
+            const originalStatus = device.status;
+            const newStatus = originalStatus === 'active' ? 'inactive' : 'active';
+
+            // Mise à jour optimiste de l'UI
+            device.status = newStatus;
+
+            // Envoi de la requête pour mettre à jour le statut dans la BDD
+            fetch('update_device_status.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    device_id: device.id,
+                    status: newStatus
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert('Échec de la mise à jour du statut.');
+                    device.status = originalStatus; // Revert UI en cas d'erreur
+                } else {
+                    console.log('Statut mis à jour avec succès');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                device.status = originalStatus; // Revert UI en cas d'échec
+                alert('Erreur de mise à jour : ' + error.message);
+            });
+
+            // Lancer ou arrêter les intervalles pour gérer la batterie, la température, et la consommation
+            if (newStatus === 'active') {
                 this.startBatteryDrain(device); // Décharger la batterie
                 this.startTemperatureIncrease(device); // Augmenter la température
                 this.startConsumptionIncrease(device); // Augmenter la consommation
+            } else {
+                this.startBatteryCharge(device); // Charger la batterie
+                this.startTemperatureRecovery(device); // Remonter la température
+                this.startConsumptionDecrease(device); // Diminuer la consommation
             }
-            this.updateDeviceStatus(device); // Mise à jour de l'état dans la base de données
         },
 
         // Méthode pour décharger la batterie
@@ -168,25 +197,6 @@ new Vue({
             }, 1000); // Charge la batterie toutes les secondes
         },
 
-        // Méthode pour mettre à jour l'état de l'appareil dans la base de données
-        updateDeviceStatus(device) {
-            fetch('update_device_status.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    device_id: device.id,
-                    status: device.status
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) {
-                    alert('Erreur de mise à jour du statut de l\'appareil.');
-                }
-            })
-            .catch(error => console.error('Erreur:', error));
-        },
-
         // Méthode pour mettre à jour la batterie dans la base de données
         updateDeviceBatteryStatus(device) {
             fetch('update_device_battery.php', {
@@ -209,9 +219,7 @@ new Vue({
     }
 });
 
-
-
-// Code pour générer les graphiques avec Chart.js
+    // Code pour générer les graphiques avec Chart.js
 document.addEventListener('DOMContentLoaded', function() {
     // Graphique de la consommation totale des appareils
     const consumptionCtx = document.getElementById('totalConsumptionChart').getContext('2d');
