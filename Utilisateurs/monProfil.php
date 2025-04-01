@@ -1,40 +1,44 @@
 <?php
-session_start();
-include '../BDD-Gestion/config.php';  // Assure-toi que le chemin est correct
+session_start(); // Démarre une session 
+include '../BDD-Gestion/config.php'; 
 
-// Récupérer l'ID de l'utilisateur connecté
+// Vérifier si l'utilisateur est connecté
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+    header("Location: login.php"); // Redirige vers la page de connexion si l'utilisateur n'est pas authentifié
     exit();
 }
 
-$userId = $_SESSION['user_id'];
+$userId = $_SESSION['user_id']; // Récupère l'ID de l'utilisateur connecté
 
-// Récupérer les informations de l'utilisateur avec mysqli
+// Récupérer les informations de l'utilisateur à partir de la base de données
 $sql = "SELECT * FROM users WHERE id = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $userId);
-$stmt->execute();
-$user = $stmt->get_result()->fetch_assoc();
+$stmt = $conn->prepare($sql); 
+$stmt->bind_param("i", $userId); // Lie l'ID de l'utilisateur à la requête
+$stmt->execute(); 
+$user = $stmt->get_result()->fetch_assoc(); // Récupère les données de l'utilisateur sous forme de tableau associatif
 
+// Si l'utilisateur n'est pas trouvé dans la BDD -> arrête l'exécution
 if (!$user) {
     die("Utilisateur introuvable.");
 }
 
-// Calcul de l'âge
+
+// Calcul de l'âge de l'utilisateur en fonction de sa date de naissance
 $birthdate = $user['birthdate'];
 $age = date_diff(date_create($birthdate), date_create('today'))->y;
 
-// Photo de profil
+// Gestion de la photo de profil
 $profile_picture = (!empty($user['profile_picture']) && file_exists("uploads/" . $user['profile_picture']))
     ? "uploads/" . $user['profile_picture']
     : "default-profile.png";
+
 
 // Message de mise à jour du profil
 $message = "";
 
 // Traitement de la mise à jour du profil
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
+    // Récupère les données du formulaire de maj du profil
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
     $first_name = trim($_POST['first_name']);
@@ -42,40 +46,41 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
     $gender = trim($_POST['gender']);
     $birthdate = trim($_POST['birthdate']);
 
+    // Requête pour maj les infos de l'utilisateur
     $sql = "UPDATE users SET username = ?, email = ?, first_name = ?, last_name = ?, gender = ?, birthdate = ? WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssssssi", $username, $email, $first_name, $last_name, $gender, $birthdate, $userId);
+    $stmt = $conn->prepare($sql); // Prépare la requête SQL
+    $stmt->bind_param("ssssssi", $username, $email, $first_name, $last_name, $gender, $birthdate, $userId); // Lier les paramètres à la requête
 
     if ($stmt->execute()) {
-        $message = '<div class="alert alert-success text-center">✅ Profil mis à jour avec succès.</div>';
+        $message = '<div class="alert alert-success text-center">Profil mis à jour avec succès.</div>';
     } else {
-        $message = '<div class="alert alert-danger text-center">❌ Erreur lors de la mise à jour.</div>';
+        $message = '<div class="alert alert-danger text-center">Erreur lors de la mise à jour.</div>';
     }
 }
 
+
 // Gestion de l'upload de la photo de profil
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
-    // Vérification des types de fichiers autorisés
+    // Vérification des types de fichiers autorisés (JPG, JPEG, PNG)
     $allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-    $fileType = mime_content_type($_FILES['profile_picture']['tmp_name']);
+    $fileType = mime_content_type($_FILES['profile_picture']['tmp_name']); // Vérifie le type MIME du fichier
 
     if (!in_array($fileType, $allowedTypes)) {
-        $message = '<div class="alert alert-danger text-center">❌ Seuls les formats JPG, JPEG et PNG sont acceptés.</div>';
+        $message = '<div class="alert alert-danger text-center">Seuls les formats JPG, JPEG et PNG sont acceptés.</div>';
     } else {
-        // Génération d'un nom unique pour la photo
+        // Génération d'un nom unique pour la photo de profil
         $fileName = "profile_" . $userId . "_" . time() . "." . pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
-        $uploadDir = __DIR__ . "/../Principale/uploads/";
-        
+        $uploadDir = __DIR__ . "/../Principale/uploads/"; // Dossier où les fichiers seront stockés
         $uploadPath = $uploadDir . $fileName;
 
-        // Vérifier si le dossier existe, sinon créer
+        // Créer le dossier s'il n'existe pas
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
 
-        // Déplacer le fichier téléchargé dans le dossier
+        // Déplacer le fichier téléchargé vers le dossier
         if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $uploadPath)) {
-            // Mettre à jour la photo de profil dans la base de données
+            // Maj la photo de profil dans la BDD
             $sql = "UPDATE users SET profile_picture = ? WHERE id = ?";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("si", $fileName, $userId);
@@ -112,21 +117,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['change_password'])) {
     // Vérifier l'ancien mot de passe
     if (password_verify($old_password, $user['password'])) {
         if ($new_password === $confirm_password) {
-            // Mettre à jour le mot de passe
+            // Maj le mot de passe
             $hashedNewPassword = password_hash($new_password, PASSWORD_BCRYPT);
             $stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
             $stmt->bind_param("si", $hashedNewPassword, $userId);
 
             if ($stmt->execute()) {
-                $message = '<div class="alert alert-success text-center">✅ Mot de passe mis à jour avec succès.</div>';
+                $message = '<div class="alert alert-success text-center">Mot de passe mis à jour avec succès.</div>';
             } else {
-                $message = '<div class="alert alert-danger text-center">❌ Erreur lors de la mise à jour du mot de passe.</div>';
+                $message = '<div class="alert alert-danger text-center">Erreur lors de la mise à jour du mot de passe.</div>';
             }
         } else {
-            $message = '<div class="alert alert-danger text-center">❌ Les mots de passe ne correspondent pas.</div>';
+            $message = '<div class="alert alert-danger text-center">Les mots de passe ne correspondent pas.</div>';
         }
     } else {
-        $message = '<div class="alert alert-danger text-center">❌ L\'ancien mot de passe est incorrect.</div>';
+        $message = '<div class="alert alert-danger text-center">L\'ancien mot de passe est incorrect.</div>';
     }
 }
 
@@ -169,6 +174,7 @@ $level = $userData['level'];
             
             <br><br>
             
+            <!-- Informations de l'utilisateur -->
             <div class="card shadow p-3 mb-4">
                 <div class="mb-3">
                     <p><strong>Niveau actuel :</strong> <?= ucfirst($level); ?></p>
